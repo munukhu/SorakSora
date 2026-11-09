@@ -44,9 +44,10 @@ db.prepare("UPDATE settings SET value = 'false' WHERE key = 'is_archived';").run
 const countResult = db.prepare('SELECT count(*) as count FROM messages;').get();
 console.log(`[DB Clean] Cleaned test artifacts. Remaining messages: ${countResult.count}`);
 
-// If table has fewer than 10 messages, re-seed with standard approved messages
-if (countResult.count < 10) {
+// If table has fewer than 10 or more than 25 messages, re-seed with standard approved messages
+if (countResult.count < 10 || countResult.count > 25) {
   console.log('[DB Clean] Re-seeding standard Indonesian cheer messages...');
+  db.exec('DELETE FROM messages;');
   const SEEDS = [
     { name: 'Maya & Teman-teman', is_anonymous: 0, message: 'Semangat terus ya, kamu pasti bisa lewatin ini! Percaya sama prosesmu. 🌟', minutesAgo: 10, likes: 24 },
     { name: 'Anonim', is_anonymous: 1, message: 'Jangan lupa napas, nikmati setiap prosesnya! Kamu sudah melangkah sejauh ini dan itu luar biasa.', minutesAgo: 22, likes: 38 },

@@ -4449,19 +4449,17 @@ export default function AdminPage() {
             aria-labelledby="import-modal-title"
           >
             {/* Header */}
-            <div className="flex items-center gap-3 pb-3 mb-4 border-b-2 border-black text-rose-600">
-              <div className="w-9 h-9 bg-rose-100 border-2 border-black flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#000]">
-                <AlertTriangle className="w-5 h-5 text-rose-600 stroke-[2.5]" />
-              </div>
-              <h3 id="import-modal-title" className="text-base sm:text-lg font-black uppercase tracking-wide text-black leading-tight">
-                ⚠️ Timpa Semua Pesan?
+            <div className="flex items-center pb-3 mb-4 border-b-2 border-black">
+              <h3 id="import-modal-title" className="text-lg font-black uppercase tracking-wide text-black leading-tight flex items-center">
+                <AlertTriangle className="w-6 h-6 text-red-500 inline-block mr-2 shrink-0 stroke-[2.5]" aria-hidden="true" />
+                <span>TIMPA SEMUA PESAN?</span>
               </h3>
             </div>
 
             {/* Body */}
             <div className="space-y-3 mb-6">
               <p className="text-xs sm:text-sm font-semibold text-neutral-700 leading-relaxed">
-                Mengimpor berkas ini akan <strong className="font-black text-black">menghapus seluruh kata-kata dan pesan cheer wall yang ada saat ini</strong> dan menggantikannya dengan isi file JSON. Tindakan ini tidak dapat dibatalkan.
+                Semua pesan cheer wall saat ini akan dihapus permanen dan digantikan data dari file JSON. Tindakan ini tidak dapat dibatalkan.
               </p>
 
               <div className="p-3 bg-neutral-100 border-2 border-black shadow-[2px_2px_0px_#000] text-xs space-y-1">

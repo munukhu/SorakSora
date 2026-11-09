@@ -309,11 +309,11 @@ test.describe('Admin Moderation & Safety Dashboard Flow', () => {
       buffer: Buffer.from(JSON.stringify(validPayload)),
     });
 
-    // Verify Destructive Overwrite Modal is visible
+    // Verify Destructive Overwrite Modal is visible with naked icon and punchy copy
     const modalTitle = page.locator('#import-modal-title');
     await expect(modalTitle).toBeVisible();
-    await expect(modalTitle).toHaveText(/Timpa Semua Pesan/);
-    await expect(page.locator('text=menghapus seluruh kata-kata dan pesan cheer wall yang ada saat ini')).toBeVisible();
+    await expect(modalTitle).toHaveText(/TIMPA SEMUA PESAN\?/i);
+    await expect(page.locator('text=Semua pesan cheer wall saat ini akan dihapus permanen dan digantikan data dari file JSON. Tindakan ini tidak dapat dibatalkan.')).toBeVisible();
 
     // Confirm overwrite
     const confirmBtn = page.locator('#confirm-import-button');
