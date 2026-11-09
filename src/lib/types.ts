@@ -109,3 +109,17 @@ export const NOTE_COLOR_PRESETS: NoteColorPreset[] = [
   { id: "sand", name: "Cokelat (Sand Pastel)", hex: "#E7D4C0", tailwind: "bg-amber-100" },
   { id: "slate", name: "Abu-abu (Chalk Pastel)", hex: "#E2E8F0", tailwind: "bg-slate-200" },
 ];
+
+export interface ImportMessageItem {
+  unique_id?: string;
+  message: string;
+  author?: string;
+  name?: string;
+  is_anonymous?: boolean;
+  color?: string;
+  likes_count?: number;
+  likes?: number;
+  status?: string;
+  created_at?: string;
+}
+

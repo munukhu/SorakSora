@@ -6,6 +6,7 @@ import {
   CreateMessageInput,
   AppSettings,
   DEFAULT_ARCHIVE_ANNOUNCEMENT,
+  ImportMessageItem,
 } from "./types";
 import { DEFAULT_BANNED_WORDS, DEFAULT_BANNED_WORDS_STR } from "./profanityFilter";
 
@@ -919,5 +920,52 @@ export function getAllMessagesForExport(): Message[] {
   const stmt = db.prepare("SELECT * FROM messages ORDER BY created_at DESC;");
   const rows = stmt.all() as unknown as MessageRow[];
   return rows.map(rowToMessage);
+}
+
+export type { ImportMessageItem } from "./types";
+
+export function overwriteAllMessages(items: ImportMessageItem[]): number {
+  const db = getDatabase();
+
+  db.exec("BEGIN;");
+  try {
+    // Wipe existing rows in messages table
+    db.exec("DELETE FROM messages;");
+
+    const insertStmt = db.prepare(`
+      INSERT INTO messages (
+        id, unique_id, name, is_anonymous, message, created_at, likes, status, is_pinned, color, is_flagged, flagged_reason, severity_score, flagged_categories, matched_words
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, '', 0, '', '');
+    `);
+
+    for (const item of items) {
+      const id = crypto.randomUUID();
+      const uniqueId = item.unique_id && typeof item.unique_id === "string" && item.unique_id.trim()
+        ? item.unique_id.trim()
+        : generateUniqueShortId(db);
+      const author = (item.author ?? item.name ?? "Anonim").trim() || "Anonim";
+      const isAnonymous = Boolean(item.is_anonymous);
+      const cleanName = isAnonymous ? "Anonim" : author;
+      const cleanMessage = item.message.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+      const createdAt = item.created_at && !isNaN(Date.parse(item.created_at))
+        ? new Date(item.created_at).toISOString()
+        : new Date().toISOString();
+      const rawLikes = item.likes_count ?? item.likes ?? 0;
+      const likes = typeof rawLikes === "number" && rawLikes >= 0 ? Math.floor(rawLikes) : 0;
+      const status = ["approved", "pending", "rejected"].includes(item.status || "")
+        ? item.status!
+        : "approved";
+      const color = typeof item.color === "string" ? item.color.trim() : "";
+
+      insertStmt.run(id, uniqueId, cleanName, isAnonymous ? 1 : 0, cleanMessage, createdAt, likes, status, color);
+    }
+
+    db.exec("COMMIT;");
+  } catch (err) {
+    db.exec("ROLLBACK;");
+    throw err;
+  }
+
+  return items.length;
 }
 

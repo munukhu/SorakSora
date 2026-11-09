@@ -5,6 +5,7 @@ const ADMIN_HEADERS = { Authorization: 'Bearer kmzway87aa' };
 const TEST_KEYWORDS = [
   '[TEST]',
   'Pesan Rate Limit',
+  'Pesan Impor',
   'Semangat RealTime Test',
   'Pesan Terkena Filter',
   'Pelari Cepat',

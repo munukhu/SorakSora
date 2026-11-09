@@ -16,6 +16,7 @@ console.log('[DB Clean] Purging test message artifacts from database...');
 const testPatterns = [
   "message LIKE '[TEST]%'",
   "message LIKE 'Pesan Rate Limit%'",
+  "message LIKE 'Pesan Impor%'",
   "message LIKE 'Semangat RealTime Test%'",
   "message LIKE 'Pesan Terkena Filter%'",
   "message LIKE '%[ID: %'",
@@ -43,8 +44,8 @@ db.prepare("UPDATE settings SET value = 'false' WHERE key = 'is_archived';").run
 const countResult = db.prepare('SELECT count(*) as count FROM messages;').get();
 console.log(`[DB Clean] Cleaned test artifacts. Remaining messages: ${countResult.count}`);
 
-// If table is empty, re-seed with standard approved messages
-if (countResult.count === 0) {
+// If table has fewer than 10 messages, re-seed with standard approved messages
+if (countResult.count < 10) {
   console.log('[DB Clean] Re-seeding standard Indonesian cheer messages...');
   const SEEDS = [
     { name: 'Maya & Teman-teman', is_anonymous: 0, message: 'Semangat terus ya, kamu pasti bisa lewatin ini! Percaya sama prosesmu. 🌟', minutesAgo: 10, likes: 24 },

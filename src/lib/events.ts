@@ -16,7 +16,7 @@ export function getEventBus(): EventEmitter {
 
 export type RealtimeEvent =
   | { type: "message:created"; message: Message }
-  | { type: "message:updated"; id: string; message: Message }
+  | { type: "message:updated"; id: string; message?: Message }
   | { type: "message:loved"; id: string; likes: number }
   | {
       type: "message:status_changed";

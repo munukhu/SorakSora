@@ -52,7 +52,23 @@ export async function GET(request: Request) {
     }
 
     // Default to JSON
-    const jsonContent = JSON.stringify(messages, null, 2);
+    const exportPayload = {
+      version: "1.0.0",
+      exported_at: new Date().toISOString(),
+      total_messages: messages.length,
+      messages: messages.map((m) => ({
+        unique_id: m.unique_id || `su-${m.id.slice(0, 4)}`,
+        message: m.message,
+        author: m.name,
+        is_anonymous: Boolean(m.is_anonymous),
+        color: m.color || "",
+        likes_count: m.likes || 0,
+        status: m.status || "approved",
+        created_at: m.created_at,
+      })),
+    };
+
+    const jsonContent = JSON.stringify(exportPayload, null, 2);
     return new Response(jsonContent, {
       headers: {
         ...cors,

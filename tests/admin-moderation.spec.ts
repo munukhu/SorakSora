@@ -221,6 +221,115 @@ test.describe('Admin Moderation & Safety Dashboard Flow', () => {
     // 11. Message remains in the pending tab
     await expect(page.locator(`text=${flaggedMsgText}`)).toBeVisible();
   });
+
+  test('should verify header cleanup, status badge parity, and JSON import/export with destructive overwrite', async ({ page }) => {
+    await page.goto('/admin');
+    await expect(page.locator('text=Memeriksa autentikasi admin...')).toHaveCount(0, { timeout: 15000 });
+    const passcodeInput = page.locator('input[placeholder="Masukkan passcode..."]');
+    if (await passcodeInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await passcodeInput.fill('kmzway87aa');
+      await page.locator('button:has-text("Masuk ke Dashboard")').click();
+    }
+    await expect(page.locator('header').locator('text=SorakSora! Admin')).toBeVisible({ timeout: 15000 });
+
+    // 1. Header Navigation Cleanup: Verify only "Cheer Wall Live" and "Keluar" are present in the top header
+    const header = page.locator('header');
+    await expect(header.locator('text=Cheer Wall Live')).toBeVisible();
+    await expect(header.locator('button:has-text("Keluar")')).toBeVisible();
+    await expect(header.locator('a:has-text("JSON")')).toHaveCount(0);
+    await expect(header.locator('a:has-text("CSV")')).toHaveCount(0);
+
+    // 2. Status Badge Parity: When Auto Live is Off, verify badge exists and is visible
+    const statusBadge = page.locator('#admin-platform-status-badge');
+    await expect(statusBadge).toBeVisible();
+
+    // 3. Navigate to Settings View
+    await page.locator('button:has-text("Pengaturan")').click();
+    await expect(page.locator('text=Pengaturan Sistem & Konfigurasi Cheer Wall')).toBeVisible();
+
+    // 4. Verify JSON Import & Export Card is placed beside Card 6
+    const importExportCard = page.locator('h3:has-text("Import & Export Data Pesan (JSON)")');
+    await expect(importExportCard).toBeVisible();
+    const exportBtn = page.locator('a:has-text("Export JSON")');
+    await expect(exportBtn).toBeVisible();
+    const importBtn = page.locator('button:has-text("Import JSON")');
+    await expect(importBtn).toBeVisible();
+
+    // 5. Test JSON Schema Validation: Malformed / Invalid JSON file rejection
+    let alertHandled = false;
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Format file JSON tidak valid atau struktur data tidak sesuai');
+      await dialog.accept();
+      alertHandled = true;
+    });
+
+    const fileInput = page.locator('input[type="file"][accept*=".json"]');
+    await fileInput.setInputFiles({
+      name: 'invalid.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify({ not_messages: 'invalid data' })),
+    });
+
+    // Wait for alert to trigger
+    await page.waitForTimeout(500);
+    expect(alertHandled).toBeTruthy();
+
+    // 6. Test Valid Import Payload: opens destructive overwrite modal
+    const validPayload = {
+      version: '1.0.0',
+      exported_at: new Date().toISOString(),
+      total_messages: 2,
+      messages: [
+        {
+          unique_id: 'test-import-1',
+          message: 'Pesan Impor Pertama Sukses!',
+          author: 'Tester Import 1',
+          is_anonymous: false,
+          color: 'yellow',
+          likes_count: 5,
+          status: 'approved',
+          created_at: new Date().toISOString(),
+        },
+        {
+          unique_id: 'test-import-2',
+          message: 'Pesan Impor Kedua Sukses!',
+          author: 'Tester Import 2',
+          is_anonymous: true,
+          color: 'green',
+          likes_count: 10,
+          status: 'approved',
+          created_at: new Date().toISOString(),
+        },
+      ],
+    };
+
+    await fileInput.setInputFiles({
+      name: 'valid-messages.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(validPayload)),
+    });
+
+    // Verify Destructive Overwrite Modal is visible
+    const modalTitle = page.locator('#import-modal-title');
+    await expect(modalTitle).toBeVisible();
+    await expect(modalTitle).toHaveText(/Timpa Semua Pesan/);
+    await expect(page.locator('text=menghapus seluruh kata-kata dan pesan cheer wall yang ada saat ini')).toBeVisible();
+
+    // Confirm overwrite
+    const confirmBtn = page.locator('#confirm-import-button');
+    await expect(confirmBtn).toBeVisible();
+    await confirmBtn.click();
+
+    // Verify success toast
+    const successToast = page.locator('text=/Berhasil mengimpor 2 pesan/i');
+    await expect(successToast).toBeVisible({ timeout: 10000 });
+
+    // 7. Return to Dashboard and verify overwritten messages exist
+    await page.locator('button:has-text("Dashboard")').click();
+    await page.locator('button:has-text("Disetujui")').click();
+    await expect(page.locator('text=Pesan Impor Pertama Sukses!')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Pesan Impor Kedua Sukses!')).toBeVisible();
+  });
 });
 
 

@@ -8,6 +8,7 @@ import {
   AdminStats,
   NOTE_COLOR_PRESETS,
   DEFAULT_ARCHIVE_ANNOUNCEMENT,
+  ImportMessageItem,
 } from "@/lib/types";
 import { formatRelativeTime } from "@/lib/utils";
 import {
@@ -200,6 +201,12 @@ export default function AdminPage() {
   const [isSavingCharLimit, setIsSavingCharLimit] = useState(false);
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
   const [isResettingSettings, setIsResettingSettings] = useState(false);
+
+  // JSON Import & Export State
+  const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
+  const [pendingImportMessages, setPendingImportMessages] = useState<ImportMessageItem[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const jsonFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Custom Sort Dropdown State & Click-Outside Handling
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -1607,6 +1614,112 @@ export default function AdminPage() {
     return `/api/admin/export?format=${format}${token ? `&token=${encodeURIComponent(token)}` : ""}`;
   };
 
+  // JSON Import handlers
+  const handleJsonFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+
+        const rawList = Array.isArray(parsed)
+          ? parsed
+          : Array.isArray(parsed?.messages)
+          ? parsed.messages
+          : null;
+
+        if (!rawList || !Array.isArray(rawList) || rawList.length === 0) {
+          throw new Error("Format file JSON tidak valid atau struktur data tidak sesuai");
+        }
+
+        const validated: ImportMessageItem[] = [];
+        for (const item of rawList) {
+          if (!item || typeof item !== "object") {
+            throw new Error("Format file JSON tidak valid atau struktur data tidak sesuai");
+          }
+          const message = typeof item.message === "string" ? item.message.trim() : "";
+          const author = typeof item.author === "string"
+            ? item.author.trim()
+            : typeof item.name === "string"
+            ? item.name.trim()
+            : "";
+
+          if (!message || !author) {
+            throw new Error("Format file JSON tidak valid atau struktur data tidak sesuai");
+          }
+
+          validated.push({
+            unique_id: typeof item.unique_id === "string" ? item.unique_id.trim() : undefined,
+            message,
+            author,
+            is_anonymous: Boolean(item.is_anonymous),
+            color: typeof item.color === "string" ? item.color.trim() : "",
+            likes_count:
+              typeof item.likes_count === "number"
+                ? item.likes_count
+                : typeof item.likes === "number"
+                ? item.likes
+                : 0,
+            status:
+              typeof item.status === "string" && ["approved", "pending", "rejected"].includes(item.status.trim())
+                ? item.status.trim()
+                : "approved",
+            created_at: typeof item.created_at === "string" ? item.created_at.trim() : undefined,
+          });
+        }
+
+        setPendingImportMessages(validated);
+        setIsImportConfirmOpen(true);
+      } catch (err) {
+        window.alert("Format file JSON tidak valid atau struktur data tidak sesuai");
+        showToast("error", "Format file JSON tidak valid atau struktur data tidak sesuai");
+      } finally {
+        if (jsonFileInputRef.current) {
+          jsonFileInputRef.current.value = "";
+        }
+      }
+    };
+
+    reader.onerror = () => {
+      window.alert("Format file JSON tidak valid atau struktur data tidak sesuai");
+      showToast("error", "Format file JSON tidak valid atau struktur data tidak sesuai");
+      if (jsonFileInputRef.current) {
+        jsonFileInputRef.current.value = "";
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  const handleExecuteImport = async () => {
+    if (pendingImportMessages.length === 0) return;
+    setIsImporting(true);
+    try {
+      const res = await adminFetch("/api/admin/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: pendingImportMessages }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast("success", data.message || `Berhasil mengimpor ${data.count} pesan dan memperbarui dinding`);
+        setIsImportConfirmOpen(false);
+        setPendingImportMessages([]);
+        loadMessages();
+      } else {
+        showToast("error", data.error || "Gagal mengimpor data JSON");
+      }
+    } catch (err) {
+      console.error("Execute import error:", err);
+      showToast("error", "Terjadi kesalahan saat mengimpor data");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
 
   // Selection toggle
   const toggleSelectAll = () => {
@@ -1822,8 +1935,9 @@ export default function AdminPage() {
                 ) : (
                   <span
                     id="admin-platform-status-badge"
-                    className="inline-flex items-center px-2 py-0.5 bg-red-400 text-white border-2 border-black text-[10px] font-bold uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    className="inline-flex items-center px-2 py-0.5 bg-red-400 text-white border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                   >
+                    <Ban className="w-3 h-3 stroke-[2.5] mr-1.5 shrink-0" aria-hidden="true" />
                     <span>Auto Live (Off)</span>
                   </span>
                 )}
@@ -1842,28 +1956,6 @@ export default function AdminPage() {
               <span>Cheer Wall Live</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
-
-            {/* Export JSON */}
-            <a
-              href={getExportUrl("json")}
-              download
-              className="nb-btn px-2.5 sm:px-3 py-1.5 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-xs font-bold border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] flex items-center gap-1.5"
-              title="Unduh semua data pesan format JSON"
-            >
-              <FileJson className="w-3.5 h-3.5 text-[#0369A1]" />
-              <span className="hidden sm:inline">JSON</span>
-            </a>
-
-            {/* Export CSV */}
-            <a
-              href={getExportUrl("csv")}
-              download
-              className="nb-btn px-2.5 sm:px-3 py-1.5 bg-[#DCFCE7] hover:bg-[#BBF7D0] text-xs font-bold border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] flex items-center gap-1.5"
-              title="Unduh semua data pesan format CSV Spreadsheet"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-[#15803D]" />
-              <span className="hidden sm:inline">CSV</span>
-            </a>
 
             {/* Logout Button */}
             <button
@@ -3077,6 +3169,77 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {/* Card: Import & Export Data Pesan (JSON) */}
+          <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-[4px_4px_0px_#1A1A1A] flex flex-col justify-between h-full">
+            {/* Card Header (Top Row) */}
+            <div className="flex items-center justify-between gap-3 mb-4 w-full">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-5 h-5 shrink-0 aspect-square flex items-center justify-center">
+                  <FileJson className="w-4 h-4 text-emerald-600 stroke-[2.5] shrink-0" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#1A1A1A] truncate leading-tight">
+                  Import &amp; Export Data Pesan (JSON)
+                </h3>
+              </div>
+              <span className="text-[11px] font-bold text-neutral-500 tabular-nums shrink-0">
+                JSON Backup
+              </span>
+            </div>
+
+            {/* Card Body (Middle) */}
+            <div className="flex-1 flex flex-col justify-between gap-4 mb-5">
+              <p className="text-[11px] font-bold text-neutral-500 leading-relaxed">
+                Cadangkan seluruh pesan cheer wall ke format JSON atau pulihkan data pesan melalui berkas cadangan. Mengimpor berkas akan menimpa seluruh pesan yang ada saat ini.
+              </p>
+
+              <div className="p-3 bg-[#FAF9F5] border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-neutral-700">
+                  <span>Total Pesan Saat Ini:</span>
+                  <span className="font-black text-black px-2 py-0.5 bg-yellow-200 border border-black text-[11px]">
+                    {stats.total} Pesan
+                  </span>
+                </div>
+                <div className="text-[10px] text-neutral-500 font-semibold leading-normal">
+                  Format berkas: Standar skema SorakSora JSON v1.0.0 dengan validasi integritas struktur data.
+                </div>
+              </div>
+            </div>
+
+            {/* Card Footer (Bottom Row) */}
+            <div className="pt-4 border-t border-[#1A1A1A]/10 flex items-center gap-3 mt-auto">
+              {/* Export Button */}
+              <a
+                href={getExportUrl("json")}
+                download
+                className="nb-btn flex-1 py-2 px-3 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-xs font-black border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] flex items-center justify-center gap-1.5 transition-all text-[#0369A1]"
+                title="Unduh berkas cadangan JSON pesan"
+              >
+                <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Export JSON</span>
+              </a>
+
+              {/* Hidden File Input */}
+              <input
+                type="file"
+                ref={jsonFileInputRef}
+                accept=".json,application/json"
+                onChange={handleJsonFileSelected}
+                className="hidden"
+              />
+
+              {/* Import Button */}
+              <button
+                type="button"
+                onClick={() => jsonFileInputRef.current?.click()}
+                className="nb-btn flex-1 py-2 px-3 bg-[#FEF08A] hover:bg-[#FDE047] text-xs font-black border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] flex items-center justify-center gap-1.5 transition-all text-neutral-900"
+                title="Unggah berkas JSON untuk menimpa semua pesan"
+              >
+                <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Import JSON</span>
+              </button>
+            </div>
+          </div>
+
           {/* Card 7: Integrasi Notifikasi Pelari (Telegram Bot) */}
           <div
             id="telegram-integration-card"
@@ -4272,6 +4435,81 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Destructive Overwrite Confirmation Modal */}
+      {isImportConfirmOpen && (
+        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div
+            className="w-full max-w-md bg-white border-[3px] border-[#1A1A1A] shadow-[8px_8px_0px_#1A1A1A] p-6 animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-modal-title"
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3 pb-3 mb-4 border-b-2 border-black text-rose-600">
+              <div className="w-9 h-9 bg-rose-100 border-2 border-black flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#000]">
+                <AlertTriangle className="w-5 h-5 text-rose-600 stroke-[2.5]" />
+              </div>
+              <h3 id="import-modal-title" className="text-base sm:text-lg font-black uppercase tracking-wide text-black leading-tight">
+                ⚠️ Timpa Semua Pesan?
+              </h3>
+            </div>
+
+            {/* Body */}
+            <div className="space-y-3 mb-6">
+              <p className="text-xs sm:text-sm font-semibold text-neutral-700 leading-relaxed">
+                Mengimpor berkas ini akan <strong className="font-black text-black">menghapus seluruh kata-kata dan pesan cheer wall yang ada saat ini</strong> dan menggantikannya dengan isi file JSON. Tindakan ini tidak dapat dibatalkan.
+              </p>
+
+              <div className="p-3 bg-neutral-100 border-2 border-black shadow-[2px_2px_0px_#000] text-xs space-y-1">
+                <div className="flex justify-between font-bold text-neutral-600">
+                  <span>Pesan baru akan dimuat:</span>
+                  <span className="font-black text-black">{pendingImportMessages.length} pesan</span>
+                </div>
+                <div className="flex justify-between font-bold text-neutral-600">
+                  <span>Pesan saat ini di database:</span>
+                  <span className="font-black text-rose-600">{stats.total} pesan (akan dihapus)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                id="cancel-import-button"
+                disabled={isImporting}
+                onClick={() => {
+                  setIsImportConfirmOpen(false);
+                  setPendingImportMessages([]);
+                }}
+                className="nb-btn px-4 py-2 bg-white hover:bg-neutral-100 text-xs sm:text-sm font-bold border-2 border-black shadow-[2px_2px_0px_#000] disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                id="confirm-import-button"
+                disabled={isImporting}
+                onClick={handleExecuteImport}
+                className="nb-btn px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs sm:text-sm font-black border-2 border-black shadow-[2px_2px_0px_#000] flex items-center gap-2 disabled:opacity-50"
+              >
+                {isImporting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Mengimpor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Ya, Timpa Semua Pesan</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
