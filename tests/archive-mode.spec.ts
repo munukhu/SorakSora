@@ -72,6 +72,19 @@ test.describe('Archive Mode', () => {
     await expect(card.locator('svg')).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
 
+    // Verify textarea is disabled and non-editable when Mode Arsip is OFF
+    await expect(editor).toBeDisabled();
+    await expect(editor).toHaveClass(/cursor-not-allowed/);
+
+    // Toggle Mode Arsip ON
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await expect(toggle).toHaveClass(/bg-\[#BBF7D0\]/);
+    await expect(statusBadge).toHaveText('Archive Mode');
+    await expect(statusBadge).toHaveClass(/bg-gray-200/);
+
+    // Verify textarea is now enabled and editable
+    await expect(editor).toBeEnabled();
     await editor.fill(CUSTOM_ARCHIVE_MARKDOWN);
 
     await expect(page.locator('text=Tersimpan Otomatis')).toBeVisible({ timeout: 5000 });
@@ -81,11 +94,11 @@ test.describe('Archive Mode', () => {
       return data.settings.archive_announcement;
     }).toBe(CUSTOM_ARCHIVE_MARKDOWN);
 
+    // Toggle Mode Arsip back OFF and verify textarea becomes disabled again
     await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
-    await expect(toggle).toHaveClass(/bg-\[#BBF7D0\]/);
-    await expect(statusBadge).toHaveText('Archive Mode');
-    await expect(statusBadge).toHaveClass(/bg-gray-200/);
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect(editor).toBeDisabled();
+    await expect(editor).toHaveClass(/cursor-not-allowed/);
   });
 
   test('renders customized archive Markdown while preserving wall, spotlight, sharing, and likes', async ({

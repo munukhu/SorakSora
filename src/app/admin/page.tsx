@@ -2715,7 +2715,9 @@ export default function AdminPage() {
               <textarea
                 rows={4}
                 value={announcementText}
+                disabled={!announcementEnabled}
                 onChange={(e) => {
+                  if (!announcementEnabled) return;
                   setAnnouncementText(e.target.value);
                   debouncedSaveSettings({
                     announcement_text: e.target.value,
@@ -2723,7 +2725,11 @@ export default function AdminPage() {
                   });
                 }}
                 placeholder="Tuliskan pesan pengumuman publik..."
-                className="w-full flex-1 p-3 border-2 border-[#1A1A1A] text-base sm:text-xs font-semibold shadow-[2px_2px_0px_#1A1A1A] focus:outline-none bg-[#FAF9F5] leading-relaxed resize-y min-h-[96px]"
+                className={`w-full flex-1 p-3 border-2 text-base sm:text-xs font-semibold shadow-[2px_2px_0px_#1A1A1A] focus:outline-none leading-relaxed resize-y min-h-[96px] ${
+                  !announcementEnabled
+                    ? "border-neutral-400 text-neutral-400 bg-neutral-50 cursor-not-allowed"
+                    : "border-[#1A1A1A] text-black bg-[#FAF9F5]"
+                }`}
               />
             </div>
           </div>
@@ -2768,7 +2774,11 @@ export default function AdminPage() {
             </div>
 
             {/* Card Body (Middle) */}
-            <div className="flex-1 flex flex-col">
+            <div
+              className={`flex-1 flex flex-col transition-opacity duration-200 ${
+                !isArchived ? "opacity-50 pointer-events-none select-none" : ""
+              }`}
+            >
               <p className="text-[11px] font-bold text-neutral-500 mb-3">
                 Kunci pengiriman pesan baru. Dinding sorakan beralih ke mode hanya-baca.
               </p>
@@ -2776,7 +2786,9 @@ export default function AdminPage() {
                 id="archive-announcement"
                 rows={4}
                 value={archiveAnnouncement}
+                disabled={!isArchived}
                 onChange={(e) => {
+                  if (!isArchived) return;
                   const value = e.target.value;
                   setArchiveAnnouncement(value);
                   debouncedSaveSettings(
@@ -2789,6 +2801,7 @@ export default function AdminPage() {
                   );
                 }}
                 onBlur={() => {
+                  if (!isArchived) return;
                   if (!archiveAnnouncement.trim()) {
                     setArchiveAnnouncement(DEFAULT_ARCHIVE_ANNOUNCEMENT);
                     saveSettingsDirect({
@@ -2797,7 +2810,11 @@ export default function AdminPage() {
                   }
                 }}
                 placeholder={DEFAULT_ARCHIVE_ANNOUNCEMENT}
-                className="w-full flex-1 p-3 border-2 border-[#1A1A1A] text-base sm:text-xs font-semibold shadow-[2px_2px_0px_#1A1A1A] focus:outline-none bg-[#FAF9F5] leading-relaxed resize-y min-h-[96px]"
+                className={`w-full flex-1 p-3 border-2 text-base sm:text-xs font-semibold shadow-[2px_2px_0px_#1A1A1A] focus:outline-none leading-relaxed resize-y min-h-[96px] ${
+                  !isArchived
+                    ? "border-neutral-400 text-neutral-400 bg-neutral-50 cursor-not-allowed"
+                    : "border-[#1A1A1A] text-black bg-[#FAF9F5]"
+                }`}
               />
             </div>
           </div>
