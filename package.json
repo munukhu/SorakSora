@@ -1,0 +1,36 @@
+{
+  "name": "soraksora",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "dotenv -e .env -c -- next dev",
+    "build": "next build",
+    "start": "dotenv -e .env -c -- next start",
+    "lint": "eslint",
+    "db:clean": "node scripts/clean-test-db.js",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@sideid/id-profanity-filter": "^1.13.0",
+    "canvas-confetti": "^1.9.4",
+    "html-to-image": "^1.11.13",
+    "lucide-react": "^1.58.0",
+    "next": "16.4.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/turbopack": "^4",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv-cli": "^11.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.2",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "description": "SorakSora: The Cheer Wall — Real-time Neobrutalist audience cheer wall delivering spectator encouragement live to stages, screens, and wearable smartwatches."
+}

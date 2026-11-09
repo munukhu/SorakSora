@@ -1,0 +1,1 @@
+# Keep data directory in git tracking while SQLite database files remain ignored.

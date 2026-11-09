@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Offset hard black drop shadow -->
+  <rect x="11" y="11" width="46" height="46" fill="#1A1A1A" rx="2" />
+  <!-- Yellow square canvas with solid black border -->
+  <rect x="7" y="7" width="46" height="46" fill="#FFF066" stroke="#1A1A1A" stroke-width="3" rx="2" />
+  <!-- Bold black centered SorakSora monogram -->
+  <text x="30" y="38" font-family="'Space Grotesk', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="26" font-weight="900" fill="#1A1A1A" text-anchor="middle" dominant-baseline="central">SS</text>
+</svg>
